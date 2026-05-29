@@ -25,6 +25,9 @@ export interface Label {
 
 export interface EmailAccount {
   email: string
+  login: string
+  domain: string
+  api: string
   createdAt: string
   lastActivity: string
   expiresAt: string

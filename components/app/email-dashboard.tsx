@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useEmailStore, Email, Label } from '@/lib/store'
-import { emailService, EmailAccount } from '@/lib/email-service'
+import { emailService } from '@/lib/email-service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -95,16 +95,21 @@ export function EmailDashboard() {
   // Initialize email account
   useEffect(() => {
     async function initAccount() {
-      if (account) {
-        emailService.setAccount(account as EmailAccount & { api: string })
+      if (account && account.login && account.domain && account.api) {
+        // Restore existing account
+        emailService.setAccount(account)
         setIsLoading(false)
         return
       }
 
+      // Create new account
       const newAccount = await emailService.createAccount()
       if (newAccount) {
         setAccount({
           email: newAccount.email,
+          login: newAccount.login,
+          domain: newAccount.domain,
+          api: newAccount.api,
           createdAt: newAccount.createdAt,
           lastActivity: newAccount.lastActivity,
           expiresAt: newAccount.expiresAt,
@@ -114,7 +119,7 @@ export function EmailDashboard() {
     }
 
     initAccount()
-  }, [account, setAccount])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch emails periodically
   const fetchEmails = useCallback(async () => {
@@ -135,12 +140,25 @@ export function EmailDashboard() {
       })
       
       setEmails(updatedEmails)
-      emailService.updateActivity()
+      
+      // Update account expiry time
+      const currentAccount = emailService.getAccount()
+      if (currentAccount) {
+        setAccount({
+          email: currentAccount.email,
+          login: currentAccount.login,
+          domain: currentAccount.domain,
+          api: currentAccount.api,
+          createdAt: currentAccount.createdAt,
+          lastActivity: currentAccount.lastActivity,
+          expiresAt: currentAccount.expiresAt,
+        })
+      }
     } catch (error) {
       console.error('Failed to fetch emails:', error)
     }
     setIsRefreshing(false)
-  }, [account, emails, setEmails])
+  }, [account, emails, setEmails, setAccount])
 
   useEffect(() => {
     if (account && !isLoading) {
